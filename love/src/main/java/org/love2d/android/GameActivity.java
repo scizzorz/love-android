@@ -119,6 +119,15 @@ public class GameActivity extends SDLActivity {
         if (!embed) {
             handleIntent(getIntent());
             setIntent(null);
+        } else {
+            // Even in embed mode, capture URL intents so the game can handle them.
+            // Without this, cold-starting via a deep link URL loses the URL because
+            // handleIntent() is skipped for embedded builds.
+            Intent intent = getIntent();
+            if (intent != null && isHandledURL(intent.getData())) {
+                pendingURL = intent.getData().toString();
+            }
+            setIntent(null);
         }
 
         super.onCreate(savedInstanceState);
