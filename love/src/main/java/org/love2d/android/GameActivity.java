@@ -137,8 +137,8 @@ public class GameActivity extends SDLActivity {
     protected void onNewIntent(Intent intent) {
         Log.d("GameActivity", "onNewIntent() with " + intent);
         Uri data = intent.getData();
-        if (data != null && "mushrooms".equals(data.getScheme())) {
-            Log.d("GameActivity", "mushrooms:// URL received: " + data.toString());
+        if (isHandledURL(data)) {
+            Log.d("GameActivity", "URL received: " + data.toString());
             pendingURL = data.toString();
             return;
         }
@@ -189,8 +189,8 @@ public class GameActivity extends SDLActivity {
                 } catch (Exception e) {
                     Log.d("GameActivity", "could not read content uri " + game.toString() + ": " + e.getMessage());
                 }
-            } else if (scheme.equals("mushrooms")) {
-                Log.d("GameActivity", "Received mushrooms:// URL: " + game.toString());
+            } else if (isHandledURL(game)) {
+                Log.d("GameActivity", "Received URL: " + game.toString());
                 pendingURL = game.toString();
             } else {
                 Log.e("GameActivity", "Unsupported scheme: '" + game.getScheme() + "'.");
@@ -340,6 +340,18 @@ public class GameActivity extends SDLActivity {
     public static boolean openURLFromLOVE(String url) {
         Log.d("GameActivity", "opening url = " + url);
         return openURL(url) == 0;
+    }
+
+    private static boolean isHandledURL(Uri uri) {
+        if (uri == null) return false;
+        if ("mushrooms".equals(uri.getScheme())) return true;
+        if ("https".equals(uri.getScheme())) {
+            String host = uri.getHost();
+            return "mshr.ms".equals(host)
+                || "spilledmushroo.ms".equals(host)
+                || "spilledmushrooms.com".equals(host);
+        }
+        return false;
     }
 
     @Keep
