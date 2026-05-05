@@ -116,19 +116,8 @@ public class GameActivity extends SDLActivity {
         storagePermissionUnnecessary = false;
         embed = getResources().getBoolean(R.bool.embed);
 
-        if (!embed) {
-            handleIntent(getIntent());
-            setIntent(null);
-        } else {
-            // Even in embed mode, capture URL intents so the game can handle them.
-            // Without this, cold-starting via a deep link URL loses the URL because
-            // handleIntent() is skipped for embedded builds.
-            Intent intent = getIntent();
-            if (intent != null && isHandledURL(intent.getData())) {
-                pendingURL = intent.getData().toString();
-            }
-            setIntent(null);
-        }
+        handleIntent(getIntent());
+        setIntent(null);
 
         super.onCreate(savedInstanceState);
         metrics = getResources().getDisplayMetrics();
@@ -161,64 +150,9 @@ public class GameActivity extends SDLActivity {
     protected void handleIntent(Intent intent) {
         Uri game = intent.getData();
 
-        if (!embed && game != null) {
-            String scheme = game.getScheme();
-            String path = game.getPath();
-            // If we have a game via the intent data we we try to figure out how we have to load it. We
-            // support the following variations:
-            // * a main.lua file: set gamePath to the directory containing main.lua
-            // * otherwise: set gamePath to the file
-            if (scheme.equals("file")) {
-                Log.d("GameActivity", "Received file:// intent with path: " + path);
-                // If we were given the path of a main.lua then use its
-                // directory. Otherwise use full path.
-                List<String> path_segments = game.getPathSegments();
-                if (path_segments.get(path_segments.size() - 1).equals("main.lua")) {
-                    gamePath = path.substring(0, path.length() - "main.lua".length());
-                } else {
-                    gamePath = path;
-                }
-            } else if (scheme.equals("content")) {
-                Log.d("GameActivity", "Received content:// intent with path: " + path);
-                try {
-                    String filename = "game.love";
-                    String[] pathSegments = path.split("/");
-                    if (pathSegments.length > 0) {
-                        filename = pathSegments[pathSegments.length - 1];
-                    }
-
-                    String destination_file = this.getCacheDir().getPath() + "/" + filename;
-                    InputStream data = getContentResolver().openInputStream(game);
-
-                    // copyAssetFile automatically closes the InputStream
-                    if (copyAssetFile(data, destination_file)) {
-                        gamePath = destination_file;
-                        storagePermissionUnnecessary = true;
-                    }
-                } catch (Exception e) {
-                    Log.d("GameActivity", "could not read content uri " + game.toString() + ": " + e.getMessage());
-                }
-            } else if (isHandledURL(game)) {
-                Log.d("GameActivity", "Received URL: " + game.toString());
-                pendingURL = game.toString();
-            } else {
-                Log.e("GameActivity", "Unsupported scheme: '" + game.getScheme() + "'.");
-
-                AlertDialog.Builder alert_dialog = new AlertDialog.Builder(this);
-                alert_dialog.setMessage("Could not load LÖVE game '" + path
-                        + "' as it uses unsupported scheme '" + game.getScheme()
-                        + "'. Please contact the developer.");
-                alert_dialog.setTitle("LÖVE for Android Error");
-                alert_dialog.setPositiveButton("Exit",
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int id) {
-                                finish();
-                            }
-                        });
-                alert_dialog.setCancelable(false);
-                alert_dialog.create().show();
-            }
+        if (game != null && isHandledURL(game)) {
+            Log.d("GameActivity", "Received URL: " + game.toString());
+            pendingURL = game.toString();
         } else {
             // No game specified via the intent data or embed build is used.
             // Load game archive only when needed.
