@@ -57,6 +57,7 @@ public class GameActivity extends SDLActivity {
     private static DisplayMetrics metrics = null;
     private static String gamePath = "";
     private static Vibrator vibrator = null;
+    private static volatile String pendingURL = null;
     protected final int[] externalStorageRequestDummy = new int[1];
     protected final int[] recordAudioRequestDummy = new int[1];
     public static final int EXTERNAL_STORAGE_REQUEST_CODE = 2;
@@ -135,6 +136,12 @@ public class GameActivity extends SDLActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         Log.d("GameActivity", "onNewIntent() with " + intent);
+        Uri data = intent.getData();
+        if (data != null && "mushrooms".equals(data.getScheme())) {
+            Log.d("GameActivity", "mushrooms:// URL received: " + data.toString());
+            pendingURL = data.toString();
+            return;
+        }
         if (!embed) {
             handleIntent(intent);
             resetNative();
@@ -182,6 +189,9 @@ public class GameActivity extends SDLActivity {
                 } catch (Exception e) {
                     Log.d("GameActivity", "could not read content uri " + game.toString() + ": " + e.getMessage());
                 }
+            } else if (scheme.equals("mushrooms")) {
+                Log.d("GameActivity", "Received mushrooms:// URL: " + game.toString());
+                pendingURL = game.toString();
             } else {
                 Log.e("GameActivity", "Unsupported scheme: '" + game.getScheme() + "'.");
 
@@ -330,6 +340,13 @@ public class GameActivity extends SDLActivity {
     public static boolean openURLFromLOVE(String url) {
         Log.d("GameActivity", "opening url = " + url);
         return openURL(url) == 0;
+    }
+
+    @Keep
+    public static String getPendingURL() {
+        String url = pendingURL;
+        pendingURL = null;
+        return url != null ? url : "";
     }
 
     /**
