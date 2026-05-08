@@ -58,10 +58,12 @@ public class GameActivity extends SDLActivity {
     private static String gamePath = "";
     private static Vibrator vibrator = null;
     private static volatile String pendingURL = null;
+    private static volatile String pendingShareResult = null;
     protected final int[] externalStorageRequestDummy = new int[1];
     protected final int[] recordAudioRequestDummy = new int[1];
     public static final int EXTERNAL_STORAGE_REQUEST_CODE = 2;
     public static final int RECORD_AUDIO_REQUEST_CODE = 3;
+    public static final int SHARE_REQUEST_CODE = 4;
     private static boolean immersiveActive = false;
     private static boolean needToCopyGameInArchive = false;
     private boolean storagePermissionUnnecessary = false;
@@ -231,6 +233,15 @@ public class GameActivity extends SDLActivity {
         super.onResume();
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == SHARE_REQUEST_CODE) {
+            pendingShareResult = (resultCode == RESULT_OK) ? "1" : "0";
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
+    }
+
     @Keep
     public void setImmersiveMode(boolean immersive_mode) {
         if (android.os.Build.VERSION.SDK_INT >= 28) {
@@ -302,6 +313,30 @@ public class GameActivity extends SDLActivity {
         String url = pendingURL;
         pendingURL = null;
         return url != null ? url : "";
+    }
+
+    @Keep
+    public static void showShareSheet(String text, String url) {
+        GameActivity self = (GameActivity) mSingleton;
+        if (self == null) return;
+
+        self.runOnUiThread(() -> {
+            String shareText = text.isEmpty() ? url : (url.isEmpty() ? text : text + "\n" + url);
+            if (shareText.isEmpty()) return;
+
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+
+            self.startActivityForResult(Intent.createChooser(shareIntent, null), SHARE_REQUEST_CODE);
+        });
+    }
+
+    @Keep
+    public static String getPendingShareResult() {
+        String result = pendingShareResult;
+        pendingShareResult = null;
+        return result != null ? result : "";
     }
 
     /**
