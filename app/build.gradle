@@ -11,8 +11,8 @@ android {
         versionCode project.properties["app.version_code"].toInteger()
         versionName project.properties["app.version_name"]
         minSdk 21
-        compileSdk 34
-        targetSdk 34
+        compileSdk 35
+        targetSdk 35
         
         def getAppName = {
             def nameArray = project.properties["app.name_byte_array"]

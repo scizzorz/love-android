@@ -11,8 +11,8 @@ android {
 
     defaultConfig {
         minSdk 21
-        compileSdk 34
-        targetSdk 34
+        compileSdk 35
+        targetSdk 35
         externalNativeBuild {
             ndkBuild {
                 arguments "-j" + Runtime.runtime.availableProcessors()
