@@ -231,6 +231,9 @@ public class GameActivity extends SDLActivity {
     @Override
     public void onResume() {
         super.onResume();
+        if (immersiveActive && android.os.Build.VERSION.SDK_INT >= 30) {
+            applyWindowInsetsImmersive(true);
+        }
     }
 
     @Override
@@ -252,6 +255,36 @@ public class GameActivity extends SDLActivity {
         }
 
         immersiveActive = immersive_mode;
+
+        // On API 30+ the deprecated setSystemUiVisibility flags no longer reliably hide
+        // system bars (Android 15 enforces edge-to-edge for targetSdk 35). Use the modern
+        // WindowInsetsController instead.
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            applyWindowInsetsImmersive(immersive_mode);
+        }
+    }
+
+    @androidx.annotation.RequiresApi(30)
+    private void applyWindowInsetsImmersive(boolean immersive) {
+        android.view.WindowInsetsController controller = getWindow().getInsetsController();
+        if (controller == null) return;
+        if (immersive) {
+            controller.hide(android.view.WindowInsets.Type.systemBars());
+            controller.setSystemBarsBehavior(
+                android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        } else {
+            controller.show(android.view.WindowInsets.Type.systemBars());
+            controller.setSystemBarsBehavior(
+                android.view.WindowInsetsController.BEHAVIOR_DEFAULT);
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && immersiveActive && android.os.Build.VERSION.SDK_INT >= 30) {
+            applyWindowInsetsImmersive(true);
+        }
     }
 
     @Keep
