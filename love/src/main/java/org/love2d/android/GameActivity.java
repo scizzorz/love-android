@@ -258,9 +258,11 @@ public class GameActivity extends SDLActivity {
 
         // On API 30+ the deprecated setSystemUiVisibility flags no longer reliably hide
         // system bars (Android 15 enforces edge-to-edge for targetSdk 35). Use the modern
-        // WindowInsetsController instead.
+        // WindowInsetsController instead. Must run on the UI thread — setImmersiveMode is
+        // called from SDLThread via nativeRunMain, and WindowInsetsController touches views.
         if (android.os.Build.VERSION.SDK_INT >= 30) {
-            applyWindowInsetsImmersive(immersive_mode);
+            final boolean immersive = immersive_mode;
+            runOnUiThread(() -> applyWindowInsetsImmersive(immersive));
         }
     }
 
