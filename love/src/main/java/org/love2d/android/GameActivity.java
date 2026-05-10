@@ -124,6 +124,12 @@ public class GameActivity extends SDLActivity {
         super.onCreate(savedInstanceState);
         metrics = getResources().getDisplayMetrics();
 
+        // API 35 enforces edge-to-edge by default; opt back into system-managed inset padding
+        // so the app doesn't draw behind the status/nav bars when fullscreen is off.
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            getWindow().setDecorFitsSystemWindows(true);
+        }
+
         // Set low-latency audio values
         nativeSetDefaultStreamValues(getAudioFreq(), getAudioSMP());
 
@@ -268,6 +274,9 @@ public class GameActivity extends SDLActivity {
 
     @androidx.annotation.RequiresApi(30)
     private void applyWindowInsetsImmersive(boolean immersive) {
+        // Toggle decor fitting: true = system adds padding so content avoids bars (non-fullscreen),
+        // false = content extends under bars (fullscreen).
+        getWindow().setDecorFitsSystemWindows(!immersive);
         android.view.WindowInsetsController controller = getWindow().getInsetsController();
         if (controller == null) return;
         if (immersive) {
