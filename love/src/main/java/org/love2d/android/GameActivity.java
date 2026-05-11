@@ -302,20 +302,20 @@ public class GameActivity extends SDLActivity {
 
     @androidx.annotation.RequiresApi(30)
     private void cacheSafeAreaInsets(android.view.WindowInsets insets) {
+        int types = android.view.WindowInsets.Type.displayCutout();
         if (!shortEdgesMode) {
-            safeAreaTop = safeAreaLeft = safeAreaBottom = safeAreaRight = 0;
-            return;
+            // Non-fullscreen: API 35 enforces edge-to-edge so the game surface extends
+            // behind visible system bars regardless of setDecorFitsSystemWindows. Include
+            // bar heights so the game knows where to safely place content.
+            types |= android.view.WindowInsets.Type.systemBars();
         }
-        // Use only the physical display cutout — not systemBars(). In fullscreen/immersive
-        // mode the bars are hidden, but their inset values can be non-zero in a snapshot
-        // taken before the hide animation completes, giving a false positive.
-        android.graphics.Insets cutout = insets.getInsets(
-            android.view.WindowInsets.Type.displayCutout()
-        );
-        safeAreaTop    = cutout.top;
-        safeAreaLeft   = cutout.left;
-        safeAreaBottom = cutout.bottom;
-        safeAreaRight  = cutout.right;
+        // In fullscreen (shortEdgesMode), bars are hidden — displayCutout() only, to avoid
+        // a false positive from systemBars() before the hide animation completes.
+        android.graphics.Insets safe = insets.getInsets(types);
+        safeAreaTop    = safe.top;
+        safeAreaLeft   = safe.left;
+        safeAreaBottom = safe.bottom;
+        safeAreaRight  = safe.right;
     }
 
     @Override
@@ -595,8 +595,6 @@ public class GameActivity extends SDLActivity {
 
     @Keep
     public boolean initializeSafeArea() {
-        if (!shortEdgesMode) return false;
-
         android.view.WindowInsets insets = getWindow().getDecorView().getRootWindowInsets();
         if (insets == null) return false;
 
