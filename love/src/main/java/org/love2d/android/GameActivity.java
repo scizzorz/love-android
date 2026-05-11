@@ -128,6 +128,13 @@ public class GameActivity extends SDLActivity {
         // so the app doesn't draw behind the status/nav bars when fullscreen is off.
         if (android.os.Build.VERSION.SDK_INT >= 30) {
             getWindow().setDecorFitsSystemWindows(true);
+            // Keep safeArea* fields current whenever insets change (rotation, bar show/hide,
+            // initial layout). initializeSafeArea() reads these cached values instead of
+            // snapshotting getRootWindowInsets() at an arbitrary point in time.
+            getWindow().getDecorView().setOnApplyWindowInsetsListener((v, insets) -> {
+                cacheSafeAreaInsets(insets);
+                return v.onApplyWindowInsets(insets);
+            });
         }
 
         // Set low-latency audio values
@@ -288,6 +295,27 @@ public class GameActivity extends SDLActivity {
             controller.setSystemBarsBehavior(
                 android.view.WindowInsetsController.BEHAVIOR_DEFAULT);
         }
+        // Trigger OnApplyWindowInsetsListener so safeArea* fields update before the next
+        // initializeSafeArea() call from native.
+        getWindow().getDecorView().requestApplyInsets();
+    }
+
+    @androidx.annotation.RequiresApi(30)
+    private void cacheSafeAreaInsets(android.view.WindowInsets insets) {
+        if (!shortEdgesMode) {
+            safeAreaTop = safeAreaLeft = safeAreaBottom = safeAreaRight = 0;
+            return;
+        }
+        // Use only the physical display cutout — not systemBars(). In fullscreen/immersive
+        // mode the bars are hidden, but their inset values can be non-zero in a snapshot
+        // taken before the hide animation completes, giving a false positive.
+        android.graphics.Insets cutout = insets.getInsets(
+            android.view.WindowInsets.Type.displayCutout()
+        );
+        safeAreaTop    = cutout.top;
+        safeAreaLeft   = cutout.left;
+        safeAreaBottom = cutout.bottom;
+        safeAreaRight  = cutout.right;
     }
 
     @Override
@@ -573,17 +601,10 @@ public class GameActivity extends SDLActivity {
         if (insets == null) return false;
 
         if (android.os.Build.VERSION.SDK_INT >= 30) {
-            // Use the modern typed API: combines display cutout + any visible system bars.
-            // When bars are hidden in immersive mode, Type.systemBars() contributes 0,
-            // so only the physical cutout (notch/punch-hole) insets remain.
-            android.graphics.Insets safe = insets.getInsets(
-                android.view.WindowInsets.Type.systemBars() |
-                android.view.WindowInsets.Type.displayCutout()
-            );
-            safeAreaTop = safe.top;
-            safeAreaLeft = safe.left;
-            safeAreaBottom = safe.bottom;
-            safeAreaRight = safe.right;
+            // safeArea* fields are kept current by the OnApplyWindowInsetsListener set in
+            // onCreate. Do a direct refresh here as a fallback for the case where the listener
+            // hasn't fired yet (e.g., called very early during startup).
+            cacheSafeAreaInsets(insets);
             return true;
         } else if (android.os.Build.VERSION.SDK_INT >= 28) {
             DisplayCutout cutout = insets.getDisplayCutout();
