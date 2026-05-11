@@ -567,9 +567,26 @@ public class GameActivity extends SDLActivity {
 
     @Keep
     public boolean initializeSafeArea() {
-        if (android.os.Build.VERSION.SDK_INT >= 28 && shortEdgesMode) {
-            DisplayCutout cutout = getWindow().getDecorView().getRootWindowInsets().getDisplayCutout();
+        if (!shortEdgesMode) return false;
 
+        android.view.WindowInsets insets = getWindow().getDecorView().getRootWindowInsets();
+        if (insets == null) return false;
+
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            // Use the modern typed API: combines display cutout + any visible system bars.
+            // When bars are hidden in immersive mode, Type.systemBars() contributes 0,
+            // so only the physical cutout (notch/punch-hole) insets remain.
+            android.graphics.Insets safe = insets.getInsets(
+                android.view.WindowInsets.Type.systemBars() |
+                android.view.WindowInsets.Type.displayCutout()
+            );
+            safeAreaTop = safe.top;
+            safeAreaLeft = safe.left;
+            safeAreaBottom = safe.bottom;
+            safeAreaRight = safe.right;
+            return true;
+        } else if (android.os.Build.VERSION.SDK_INT >= 28) {
+            DisplayCutout cutout = insets.getDisplayCutout();
             if (cutout != null) {
                 safeAreaTop = cutout.getSafeInsetTop();
                 safeAreaLeft = cutout.getSafeInsetLeft();
