@@ -300,6 +300,14 @@ public class GameActivity extends SDLActivity {
         PlayGames.getAchievementsClient(self).setSteps(id, steps);
     }
 
+    @Keep
+    public static void showAchievements() {
+        GameActivity self = (GameActivity) mSingleton;
+        if (self == null || !playGamesSignedIn) return;
+        PlayGames.getAchievementsClient(self).getAchievementsIntent()
+            .addOnSuccessListener(intent -> self.startActivityForResult(intent, 0));
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == SHARE_REQUEST_CODE) {
