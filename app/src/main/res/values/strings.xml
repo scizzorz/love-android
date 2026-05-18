@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Replace with your Play Games app ID from the Google Play Console -->
+    <string name="play_games_app_id" translatable="false">750911483820</string>
+</resources>

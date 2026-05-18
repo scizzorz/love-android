@@ -53,6 +53,9 @@ import android.content.pm.PackageManager;
 import androidx.annotation.Keep;
 import androidx.core.app.ActivityCompat;
 
+import com.google.android.gms.games.GamesSignInClient;
+import com.google.android.gms.games.PlayGames;
+
 public class GameActivity extends SDLActivity {
     private static DisplayMetrics metrics = null;
     private static String gamePath = "";
@@ -66,6 +69,7 @@ public class GameActivity extends SDLActivity {
     public static final int SHARE_REQUEST_CODE = 4;
     private static boolean immersiveActive = false;
     private static boolean needToCopyGameInArchive = false;
+    private static volatile boolean playGamesSignedIn = false;
     private boolean storagePermissionUnnecessary = false;
     private boolean shortEdgesMode = false;
     public boolean embed = false;
@@ -144,6 +148,8 @@ public class GameActivity extends SDLActivity {
             getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
             shortEdgesMode = false;
         }
+
+        initializePlayGames();
     }
 
     @Override
@@ -247,6 +253,51 @@ public class GameActivity extends SDLActivity {
         if (immersiveActive && android.os.Build.VERSION.SDK_INT >= 30) {
             applyWindowInsetsImmersive(true);
         }
+        PlayGames.getGamesSignInClient(this).isAuthenticated().addOnCompleteListener(task ->
+            playGamesSignedIn = task.isSuccessful() && task.getResult().isAuthenticated()
+        );
+    }
+
+    private void initializePlayGames() {
+        GamesSignInClient signInClient = PlayGames.getGamesSignInClient(this);
+        signInClient.isAuthenticated().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult().isAuthenticated()) {
+                playGamesSignedIn = true;
+                Log.d("GameActivity", "Play Games: already signed in");
+            } else {
+                Log.d("GameActivity", "Play Games: not signed in, attempting sign in");
+                signInClient.signIn().addOnCompleteListener(signInTask -> {
+                    playGamesSignedIn = signInTask.isSuccessful() && signInTask.getResult().isAuthenticated();
+                    Log.d("GameActivity", "Play Games: sign in " + (playGamesSignedIn ? "successful" : "failed or declined"));
+                });
+            }
+        });
+    }
+
+    @Keep
+    public static boolean isSignedIn() {
+        return playGamesSignedIn;
+    }
+
+    @Keep
+    public static void unlockAchievement(String id) {
+        GameActivity self = (GameActivity) mSingleton;
+        if (self == null || !playGamesSignedIn) return;
+        PlayGames.getAchievementsClient(self).unlock(id);
+    }
+
+    @Keep
+    public static void incrementAchievement(String id, int steps) {
+        GameActivity self = (GameActivity) mSingleton;
+        if (self == null || !playGamesSignedIn) return;
+        PlayGames.getAchievementsClient(self).increment(id, steps);
+    }
+
+    @Keep
+    public static void setAchievementSteps(String id, int steps) {
+        GameActivity self = (GameActivity) mSingleton;
+        if (self == null || !playGamesSignedIn) return;
+        PlayGames.getAchievementsClient(self).setSteps(id, steps);
     }
 
     @Override
